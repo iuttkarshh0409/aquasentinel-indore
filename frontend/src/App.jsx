@@ -10,8 +10,145 @@ import {
   Compass
 } from "lucide-react";
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
+import L from "leaflet";
 import Card from "./components/Card";
 
+// ====================================================================
+// INTERACTIVE GIS MAP COMPONENT (React Leaflet Wrapper)
+// ====================================================================
+function InteractiveMap({ activeBlock, onBlockSelect, simulatedRiskLevel, riskScore }) {
+  const mapRef = useRef(null);
+  const mapInstanceRef = useRef(null);
+  const circlesRef = useRef({});
+
+  // Geofenced Block Coordinates representing regional aquifers
+  const blocksConfig = [
+    { name: "Depalpur", coords: [22.8456, 75.5401], baseRadius: 6200 },
+    { name: "Sanwer", coords: [22.9754, 75.8117], baseRadius: 5800 },
+    { name: "Indore", coords: [22.7196, 75.8577], baseRadius: 5200 },
+    { name: "Mhow", coords: [22.5519, 75.7536], baseRadius: 5400 },
+  ];
+
+  // Initialize Map
+  useEffect(() => {
+    if (!mapInstanceRef.current && mapRef.current) {
+      const map = L.map(mapRef.current, {
+        center: [22.78, 75.74], // Center covers all active blocks
+        zoom: 9.5,
+        zoomControl: false,
+        attributionControl: false,
+      });
+
+      // Clean light-mode open-source CartoDB map tiles
+      L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
+        maxZoom: 19,
+      }).addTo(map);
+
+      mapInstanceRef.current = map;
+
+      // Draw Interactive Aquifer Zones
+      blocksConfig.forEach((blk) => {
+        const circle = L.circle(blk.coords, {
+          radius: blk.baseRadius,
+          color: "#94a3b8",
+          weight: 1,
+          fillColor: "#cbd5e1",
+          fillOpacity: 0.4,
+        }).addTo(map);
+
+        // Click Handler
+        circle.on("click", () => {
+          onBlockSelect(blk.name);
+        });
+
+        // Hover Animations
+        circle.on("mouseover", () => {
+          circle.setStyle({ fillOpacity: 0.65, weight: 1.5, color: "#0284c7" });
+        });
+        circle.on("mouseout", () => {
+          const isActive = activeBlock === blk.name;
+          circle.setStyle({
+            fillOpacity: isActive ? 0.6 : 0.4,
+            weight: isActive ? 2 : 1,
+            color: isActive ? "#0284c7" : "#cbd5e1",
+          });
+        });
+
+        // Tooltip
+        circle.bindTooltip(`<b>${blk.name} Block</b><br/>Click to target zone`, {
+          direction: "top",
+          permanent: false,
+          opacity: 0.9,
+        });
+
+        circlesRef.current[blk.name] = circle;
+      });
+    }
+
+    return () => {
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.remove();
+        mapInstanceRef.current = null;
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Synchronize state updates (Dynamic coloring & focus highlights)
+  useEffect(() => {
+    if (mapInstanceRef.current) {
+      blocksConfig.forEach((blk) => {
+        const circle = circlesRef.current[blk.name];
+        if (circle) {
+          const isActive = activeBlock === blk.name;
+          
+          let color = "#10b981"; // Nominal Low Risk: Emerald
+          if (isActive) {
+            if (simulatedRiskLevel === "CRITICAL" || simulatedRiskLevel === "HIGH") {
+              color = "#ef4444"; // Red
+            } else if (simulatedRiskLevel === "MEDIUM") {
+              color = "#f59e0b"; // Amber
+            }
+          } else {
+            // Default baselines for inactive blocks
+            if (blk.name === "Depalpur" || blk.name === "Sanwer") {
+              color = "#f87171"; // Moderate-High
+            } else if (blk.name === "Indore") {
+              color = "#fbbf24"; // Moderate
+            } else {
+              color = "#34d399"; // Low
+            }
+          }
+
+          circle.setStyle({
+            fillColor: color,
+            fillOpacity: isActive ? 0.6 : 0.3,
+            color: isActive ? "#0284c7" : "#cbd5e1",
+            weight: isActive ? 2.5 : 1,
+          });
+
+          if (isActive) {
+            circle.openTooltip();
+          }
+        }
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeBlock, simulatedRiskLevel, riskScore]);
+
+  return (
+    <div className="w-full h-72 rounded border border-slate-200/80 overflow-hidden relative shadow-inner z-0">
+      <div ref={mapRef} className="w-full h-full bg-slate-100" />
+      <div className="absolute bottom-2 right-2 bg-white/90 backdrop-blur-sm border border-slate-200 rounded px-2.5 py-1 text-[9px] font-bold text-slate-500 uppercase tracking-wider shadow-sm z-[1000] pointer-events-none">
+        Target Aquifer: {activeBlock}
+      </div>
+    </div>
+  );
+}
+
+// ====================================================================
+// MAIN APP COMPONENT
+// ====================================================================
 function App() {
   // Live Sensor Data (Demo Mode / Simulated)
   const [sensorWaterLevel, setSensorWaterLevel] = useState(23.0);
@@ -54,16 +191,6 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // Topological Grid Heatmap Data
-  const heatmapSectors = [
-    { name: "Depalpur Zone A", block: "Depalpur", risk: "HIGH", code: "DP-A" },
-    { name: "Depalpur Zone B", block: "Depalpur", risk: "MEDIUM", code: "DP-B" },
-    { name: "Sanwer North", block: "Sanwer", risk: "HIGH", code: "SW-N" },
-    { name: "Sanwer South", block: "Sanwer", risk: "MEDIUM", code: "SW-S" },
-    { name: "Indore Central", block: "Indore", risk: "MEDIUM", code: "ID-C" },
-    { name: "Mhow Heights", block: "Mhow", risk: "LOW", code: "MH-H" },
-  ];
-
   // Block defaults map
   const blockDefaults = {
     Depalpur: { avgDepth: 11.55, riskScore: 61.4, aquifer: "Semi-Confined" },
@@ -79,21 +206,6 @@ function App() {
       setBlockAvgDepth(blockDefaults[newBlock].avgDepth);
       setBlockRiskScore(blockDefaults[newBlock].riskScore);
       setAquifer(blockDefaults[newBlock].aquifer);
-    }
-  };
-
-  // Interactive Ward select trigger
-  const handleWardClick = (wardBlock) => {
-    setBlock(wardBlock);
-    if (blockDefaults[wardBlock]) {
-      setBlockAvgDepth(blockDefaults[wardBlock].avgDepth);
-      setBlockRiskScore(blockDefaults[wardBlock].riskScore);
-      setAquifer(blockDefaults[wardBlock].aquifer);
-      
-      // Auto-trigger prediction
-      setTimeout(() => {
-        document.getElementById("predictor-form-submit-btn")?.click();
-      }, 50);
     }
   };
 
@@ -199,17 +311,14 @@ function App() {
   let simulatedRiskScore = riskScore;
 
   if (rechargeProgram) {
-    // Recharge pit programs improve aquifer height (reduces depth below ground level by 15%)
     simulatedWaterLevel = Number((simulatedWaterLevel * 0.85).toFixed(2));
     simulatedRiskScore = Math.max(0, simulatedRiskScore - 12);
   }
   if (extractionCap) {
-    // Extraction cap controls drawdowns by 10%
     simulatedWaterLevel = Number((simulatedWaterLevel * 0.90).toFixed(2));
     simulatedRiskScore = Math.max(0, simulatedRiskScore - 8);
   }
   if (industrialStress) {
-    // Unchecked drawdown increases mbgl depth by 25%
     simulatedWaterLevel = Number((simulatedWaterLevel * 1.25).toFixed(2));
     simulatedRiskScore = Math.min(100, simulatedRiskScore + 15);
   }
@@ -227,7 +336,7 @@ function App() {
     }
   }
 
-  // Prepare chart data for Recharts (showing baseline vs ML forecast vs simulated target)
+  // Prepare chart data for Recharts
   const chartData = [
     { name: "Historical", level: Number(currentWaterLevel) * 1.1 },
     { name: "Current Baseline", level: Number(currentWaterLevel) },
@@ -235,7 +344,7 @@ function App() {
     { name: "Simulated Model", level: Number(simulatedWaterLevel) }
   ];
 
-  // Determine risk theme colors (Light Mode High-Contrast Pastel / Steel gray borders)
+  // Determine risk theme colors
   let riskColorClass = "text-slate-600 border-slate-200 bg-slate-100";
   let gaugeStroke = "#0284c7";
   if (simulatedRiskLevel === "CRITICAL") {
@@ -252,7 +361,6 @@ function App() {
     gaugeStroke = "#059669";
   }
 
-  // Calculate circular dial path attributes
   const radius = 40;
   const strokeWidth = 5.5;
   const circumference = 2 * Math.PI * radius;
@@ -267,11 +375,10 @@ function App() {
       <div className="absolute top-0 left-1/4 w-[600px] h-[600px] bg-sky-200/20 rounded-full blur-[120px] pointer-events-none -z-10" />
       <div className="absolute bottom-10 right-1/4 w-[500px] h-[500px] bg-emerald-100/30 rounded-full blur-[100px] pointer-events-none -z-10" />
 
-      {/* HEADER SECTION (PREMIUM LIGHT MUNICIPAL PORTAL) */}
+      {/* HEADER SECTION */}
       <header className="w-full max-w-7xl mx-auto px-6 py-6 flex flex-col md:flex-row justify-between items-start md:items-center border-b border-slate-200/80 mb-8 gap-4 z-10">
         <div className="flex items-center gap-3">
           <div className="p-2.5 rounded bg-white border border-slate-200 text-sky-600 shadow-sm">
-            {/* Groundwater Layers Abstraction Logo */}
             <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <path d="M12 2L2 7l10 5 10-5-10-5z" />
               <path d="M2 17l10 5 10-5" />
@@ -296,7 +403,7 @@ function App() {
             </span>
           </div>
           <div className="text-[10px] text-slate-400 font-medium">
-            System Dashboard v2.1
+            System Dashboard v2.2
           </div>
         </div>
       </header>
@@ -304,10 +411,10 @@ function App() {
       {/* MAIN CONTAINER */}
       <main className="flex-grow w-full max-w-7xl mx-auto px-6 grid grid-cols-1 lg:grid-cols-12 gap-8 items-start pb-16 z-10">
         
-        {/* LEFT COMPONENT (GRID 7): CONTROLS, TELEMETRY, MONITORING */}
+        {/* LEFT COMPONENT */}
         <div className="lg:col-span-7 flex flex-col gap-8">
           
-          {/* TELEMETRY CARDS SECTION */}
+          {/* TELEMETRY */}
           <section>
             <h2 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-2">
               <Activity className="w-3.5 h-3.5" />
@@ -320,7 +427,6 @@ function App() {
               <Card title="Risk" value={sensorRisk} />
             </div>
 
-            {/* VIRTUAL SENSOR CONSOLE (REAL-TIME CONSOLE SIMULATOR) */}
             <div className="glass-card rounded p-4 flex flex-col shadow-inner">
               <div className="flex justify-between items-center mb-2.5 pb-1.5 border-b border-slate-200/30">
                 <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wide flex items-center gap-1.5">
@@ -342,14 +448,14 @@ function App() {
             </div>
           </section>
 
-          {/* CONTROL PANEL WORKSPACE */}
+          {/* FORECAST WORKSPACE */}
           <section className="glass-card rounded p-6 relative overflow-hidden">
             <h2 className="text-base font-bold text-slate-800 mb-4 flex items-center gap-2">
               <Compass className="w-4 h-4 text-sky-500" />
               Groundwater Forecast Workspace
             </h2>
 
-            {/* ADVANCED BLOCK PRESET SELECTOR (Segmented Tab Bar) */}
+            {/* PRESETS */}
             <div className="mb-6 flex flex-col gap-2">
               <label className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Target Block Quick Presets</label>
               <div className="flex p-1 rounded-lg bg-slate-200/50 border border-slate-200/80 gap-1 relative overflow-hidden self-start">
@@ -478,54 +584,29 @@ function App() {
             </form>
           </section>
 
-          {/* WARD RISK HEATMAP (TOPOLOGICAL GEOMETRIC GRID) */}
+          {/* WARD RISK HEATMAP (INTERACTIVE LEAFLET GIS MAP) */}
           <section className="glass-card rounded p-6 text-left">
             <h2 className="text-base font-bold text-slate-800 mb-1.5 flex items-center gap-2">
               <MapPin className="w-4 h-4 text-sky-500" />
-              Ward Risk Heatmap (Indore Spatial Matrix)
+              Ward Risk Heatmap (Indore Aquifer Zones)
             </h2>
             <p className="text-xs text-slate-400 mb-4">
-              Visual risk distribution map of aquifer stress nodes. Click any grid cell to load it.
+              Real-time interactive GIS map of Indore groundwater regions. Click any aquifer zone circle to sync the workspace.
             </p>
 
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-              {heatmapSectors.map((sector, idx) => {
-                let riskBg = "bg-emerald-50 border-emerald-200 text-emerald-800";
-                if (sector.risk === "HIGH") {
-                  riskBg = "bg-rose-50 border-rose-200 text-rose-800";
-                } else if (sector.risk === "MEDIUM") {
-                  riskBg = "bg-amber-50 border-amber-200 text-amber-800";
-                }
-                const isSelected = block === sector.block;
-
-                return (
-                  <button
-                    key={idx}
-                    type="button"
-                    onClick={() => handleWardClick(sector.block)}
-                    className={`p-3.5 rounded border text-left flex flex-col justify-between h-20 transition-all duration-200 select-none ${riskBg} ${
-                      isSelected ? "ring-2 ring-sky-500 ring-offset-2 scale-[1.01]" : "hover:brightness-95"
-                    }`}
-                  >
-                    <div className="flex justify-between items-center w-full">
-                      <span className="text-[10px] font-bold tracking-wider">{sector.code}</span>
-                      <span className="text-[8px] font-extrabold uppercase tracking-wide px-1.5 py-0.5 rounded bg-white/60">
-                        {sector.risk}
-                      </span>
-                    </div>
-                    <span className="text-xs font-bold truncate mt-2">{sector.name}</span>
-                  </button>
-                );
-              })}
-            </div>
+            <InteractiveMap 
+              activeBlock={block} 
+              onBlockSelect={handleBlockChange} 
+              simulatedRiskLevel={simulatedRiskLevel} 
+              riskScore={simulatedRiskScore} 
+            />
           </section>
 
         </div>
 
-        {/* RIGHT COMPONENT (GRID 5): ANALYTICS & INSIGHTS */}
+        {/* RIGHT COMPONENT */}
         <div className="lg:col-span-5 flex flex-col gap-8">
           
-          {/* API ERROR CONTAINER */}
           <AnimatePresence>
             {error && (
               <motion.div 
@@ -543,10 +624,9 @@ function App() {
             )}
           </AnimatePresence>
 
-          {/* ANALYTICS PANEL */}
+          {/* ANALYTICS */}
           <section className="glass-card rounded p-6 relative text-left">
             
-            {/* OVERLAY SKELETON LOADER */}
             <AnimatePresence>
               {loading && (
                 <motion.div 
@@ -568,10 +648,8 @@ function App() {
               Groundwater Forecast Analysis
             </h2>
 
-            {/* RADIAL DIAL & RECHARTS */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 mb-5">
               
-              {/* RADIAL DIAL */}
               <div className="flex flex-col items-center justify-center p-4 rounded border border-slate-100 bg-white/40">
                 <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider mb-3">
                   Aquifer Stress Score
@@ -613,7 +691,6 @@ function App() {
                 </div>
               </div>
 
-              {/* TRAJECTORY GRAPH */}
               <div className="flex flex-col p-4 rounded border border-slate-100 bg-white/40 min-h-[140px]">
                 <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider mb-2">
                   Forecast Trajectory (ft)
@@ -643,7 +720,6 @@ function App() {
 
             </div>
 
-            {/* KEY DATA BENCHMARKS */}
             <div className="p-4 rounded border border-slate-100 bg-white/40 divide-y divide-slate-100 space-y-3 shadow-sm">
               <div className="flex justify-between items-center text-xs">
                 <span className="text-slate-500 font-medium">Original ML Projection</span>
@@ -663,7 +739,7 @@ function App() {
 
           </section>
 
-          {/* "WHAT IF" SIMULATOR INTERVENTIONS */}
+          {/* SIMULATOR */}
           <section className="glass-card rounded p-6 text-left">
             <div className="flex items-center justify-between mb-4 pb-2 border-b border-slate-200/50">
               <h2 className="text-base font-bold text-slate-800 flex items-center gap-2">
@@ -717,9 +793,9 @@ function App() {
             </div>
           </section>
 
-          {/* INTERVENTION RECOMMENDATION CENTER */}
+          {/* RECOMMENDATIONS */}
           <section className="glass-card rounded p-6 text-left">
-            <h2 className="text-base font-bold text-white mb-4 flex items-center gap-2">
+            <h2 className="text-base font-bold text-slate-800 mb-4 flex items-center gap-2">
               <Award className="w-4 h-4 text-emerald-500" />
               Intervention Recommendations
             </h2>
