@@ -1,0 +1,54 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-slate-50 text-slate-800 antialiased selection:bg-sky-100 selection:text-slate-900;
+    font-family: 'Google Sans Text', 'Outfit', 'Inter', sans-serif;
+  }
+}
+
+/* Light Glassmorphism Card Style */
+.glass-card {
+  background: rgba(255, 255, 255, 0.45);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  box-shadow: 
+    0 4px 6px -1px rgba(0, 0, 0, 0.02), 
+    0 2px 4px -1px rgba(0, 0, 0, 0.01),
+    0 10px 15px -3px rgba(15, 23, 42, 0.03);
+}
+
+.glass-card-hover {
+  @apply transition-all duration-200 ease-out;
+}
+.glass-card-hover:hover {
+  background: rgba(255, 255, 255, 0.6);
+  border-color: rgba(255, 255, 255, 0.8);
+  box-shadow: 
+    0 10px 15px -3px rgba(0, 0, 0, 0.04),
+    0 4px 6px -4px rgba(0, 0, 0, 0.02);
+}
+
+/* Custom scrollbar styling for light theme */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+::-webkit-scrollbar-track {
+  background: rgba(241, 245, 249, 0.5);
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(203, 213, 225, 0.8);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 163, 184, 0.8);
+}
+
+/* Light Theme Input Styling */
+.linear-input {
+  @apply bg-white/70 border border-slate-200/80 text-slate-800 px-3.5 py-2 rounded focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 transition-all duration-150 text-sm shadow-sm placeholder-slate-400;
+}

@@ -1,0 +1,55 @@
+# ====================================================================
+# AquaSentinel Root gitignore
+# ====================================================================
+
+# Hackathon Context & Documentation Folders
+01_Product_Context/
+02_System_Design/
+03_Data_Engineering/
+04_Machine_Learning/
+05_Decision_Intelligence/
+06_Implementation/
+additionals/
+README_PROJECT_CONTEXT.md
+
+# Datasets and Large Data Files
+datasets/
+*.csv
+*.xlsx
+*.tsv
+
+# Editor & IDE Directories
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Package & Build Cache (Root triggers)
+node_modules/
+dist/
+build/
+out/
+.gradle/
+.lock/
+.planning/
+.agent/
+
+# Python Virtual Environments & Bytecode (Root triggers)
+venv/
+.venv/
+env/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Environment variables
+.env
+.env.local
+.env.*.local
