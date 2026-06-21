@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   Activity, 
@@ -7,7 +7,6 @@ import {
   TrendingUp, 
   RefreshCw, 
   MapPin, 
-  ChevronRight, 
   Compass
 } from "lucide-react";
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
@@ -19,6 +18,13 @@ function App() {
   const [sensorPh, setSensorPh] = useState(7.4);
   const [sensorTds, setSensorTds] = useState(450);
   const [sensorRisk, setSensorRisk] = useState("LOW");
+
+  // Virtual Sensor Control Room Console Logs Feed
+  const [consoleLogs, setConsoleLogs] = useState([
+    "System booted. Initializing aquifer telemetry links...",
+    "Live telemetry feed online. Station ID: IMC-AQ-452"
+  ]);
+  const consoleEndRef = useRef(null);
 
   // AI Prediction Inputs (Real / Forecast System)
   const [block, setBlock] = useState("Depalpur");
@@ -39,17 +45,23 @@ function App() {
     "Increase monitoring frequency",
     "Promote rainwater harvesting"
   ]);
+
+  // "What If" Simulator Policy Toggles
+  const [rechargeProgram, setRechargeProgram] = useState(false);
+  const [extractionCap, setExtractionCap] = useState(false);
+  const [industrialStress, setIndustrialStress] = useState(false);
   
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // Ward risk table values
-  const wards = [
-    { name: "Ward 12 (Depalpur)", block: "Depalpur", risk: "HIGH" },
-    { name: "Ward 7 (Sanwer)", block: "Sanwer", risk: "HIGH" },
-    { name: "Ward 3 (Indore)", block: "Indore", risk: "MEDIUM" },
-    { name: "Ward 18 (Mhow)", block: "Mhow", risk: "LOW" },
-    { name: "Ward 22 (Indore)", block: "Indore", risk: "MEDIUM" },
+  // Topological Grid Heatmap Data
+  const heatmapSectors = [
+    { name: "Depalpur Zone A", block: "Depalpur", risk: "HIGH", code: "DP-A" },
+    { name: "Depalpur Zone B", block: "Depalpur", risk: "MEDIUM", code: "DP-B" },
+    { name: "Sanwer North", block: "Sanwer", risk: "HIGH", code: "SW-N" },
+    { name: "Sanwer South", block: "Sanwer", risk: "MEDIUM", code: "SW-S" },
+    { name: "Indore Central", block: "Indore", risk: "MEDIUM", code: "ID-C" },
+    { name: "Mhow Heights", block: "Mhow", risk: "LOW", code: "MH-H" },
   ];
 
   // Block defaults map
@@ -91,8 +103,7 @@ function App() {
     setLoading(true);
     setError(null);
     try {
-      const apiBase = import.meta.env.VITE_API_URL || "https://aquasentinel-indore-sgo8.onrender.com";
-      const response = await fetch(`${apiBase}/predict`, {
+      const response = await fetch("https://aquasentinel-indore-sgo8.onrender.com/predict", {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
@@ -130,7 +141,6 @@ function App() {
   useEffect(() => {
     let active = true;
     const fetchInitial = async () => {
-      // Defer execution slightly to prevent synchronous cascading renders during commit phase
       await new Promise((resolve) => setTimeout(resolve, 0));
       if (active) {
         handlePredict();
@@ -142,7 +152,7 @@ function App() {
     };
   }, [handlePredict]);
 
-  // Demo Mode: Sensor Simulation Loop (Runs in background)
+  // Virtual Sensor Simulation loop
   useEffect(() => {
     const interval = setInterval(() => {
       const level = (20 + Math.random() * 5).toFixed(1);
@@ -153,38 +163,89 @@ function App() {
       setSensorPh(phValue);
       setSensorTds(tdsValue);
 
+      let currentRisk = "LOW";
       if (level < 21) {
-        setSensorRisk("HIGH");
+        currentRisk = "HIGH";
       } else if (level < 23) {
-        setSensorRisk("MEDIUM");
-      } else {
-        setSensorRisk("LOW");
+        currentRisk = "MEDIUM";
       }
-    }, 3000);
+      setSensorRisk(currentRisk);
+
+      // Generate a dynamic, formatted terminal log line
+      const timestamp = new Date().toLocaleTimeString();
+      const zones = ["Zone-A (Depalpur)", "Zone-N (Sanwer)", "Central (Indore)", "Heights (Mhow)"];
+      const targetZone = zones[Math.floor(Math.random() * zones.length)];
+      const logMessage = `[${timestamp}] Telemetry synced from ${targetZone} • pH: ${phValue} • TDS: ${tdsValue}ppm • Level: ${level}ft [${currentRisk} RISK]`;
+
+      setConsoleLogs((prev) => {
+        const newLogs = [...prev, logMessage];
+        if (newLogs.length > 25) newLogs.shift();
+        return newLogs;
+      });
+    }, 2800);
 
     return () => clearInterval(interval);
   }, []);
 
-  // Prepare chart data for Recharts
+  // Auto-scroll the virtual sensor log console
+  useEffect(() => {
+    consoleEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [consoleLogs]);
+
+  // Calculate "What If" simulation values
+  let simulatedWaterLevel = predictedWaterLevel;
+  let simulatedRiskScore = riskScore;
+
+  if (rechargeProgram) {
+    // Recharge pit programs improve aquifer height (reduces depth below ground level by 15%)
+    simulatedWaterLevel = Number((simulatedWaterLevel * 0.85).toFixed(2));
+    simulatedRiskScore = Math.max(0, simulatedRiskScore - 12);
+  }
+  if (extractionCap) {
+    // Extraction cap controls drawdowns by 10%
+    simulatedWaterLevel = Number((simulatedWaterLevel * 0.90).toFixed(2));
+    simulatedRiskScore = Math.max(0, simulatedRiskScore - 8);
+  }
+  if (industrialStress) {
+    // Unchecked drawdown increases mbgl depth by 25%
+    simulatedWaterLevel = Number((simulatedWaterLevel * 1.25).toFixed(2));
+    simulatedRiskScore = Math.min(100, simulatedRiskScore + 15);
+  }
+
+  let simulatedRiskLevel = riskLevel;
+  if (rechargeProgram || extractionCap || industrialStress) {
+    if (simulatedRiskScore >= 75) {
+      simulatedRiskLevel = "CRITICAL";
+    } else if (simulatedRiskScore >= 60) {
+      simulatedRiskLevel = "HIGH";
+    } else if (simulatedRiskScore >= 45) {
+      simulatedRiskLevel = "MEDIUM";
+    } else {
+      simulatedRiskLevel = "LOW";
+    }
+  }
+
+  // Prepare chart data for Recharts (showing baseline vs ML forecast vs simulated target)
   const chartData = [
     { name: "Historical", level: Number(currentWaterLevel) * 1.1 },
     { name: "Current Baseline", level: Number(currentWaterLevel) },
-    { name: "30-Day Forecast", level: Number(predictedWaterLevel) }
+    { name: "ML Forecast", level: Number(predictedWaterLevel) },
+    { name: "Simulated Model", level: Number(simulatedWaterLevel) }
   ];
 
   // Determine risk theme colors (Light Mode High-Contrast Pastel / Steel gray borders)
   let riskColorClass = "text-slate-600 border-slate-200 bg-slate-100";
   let gaugeStroke = "#0284c7";
-  if (riskLevel === "CRITICAL") {
+  if (simulatedRiskLevel === "CRITICAL") {
     riskColorClass = "text-red-700 border-red-200 bg-red-50";
     gaugeStroke = "#dc2626";
-  } else if (riskLevel === "HIGH") {
+  } else if (simulatedRiskLevel === "HIGH") {
     riskColorClass = "text-rose-700 border-rose-200 bg-rose-50";
     gaugeStroke = "#e11d48";
-  } else if (riskLevel === "MEDIUM") {
+  } else if (simulatedRiskLevel === "MEDIUM") {
     riskColorClass = "text-amber-700 border-amber-200 bg-amber-50";
     gaugeStroke = "#d97706";
-  } else if (riskLevel === "LOW") {
+  } else if (simulatedRiskLevel === "LOW") {
     riskColorClass = "text-emerald-700 border-emerald-200 bg-emerald-50";
     gaugeStroke = "#059669";
   }
@@ -193,7 +254,7 @@ function App() {
   const radius = 40;
   const strokeWidth = 5.5;
   const circumference = 2 * Math.PI * radius;
-  const strokeDashoffset = circumference - (riskScore / 100) * circumference;
+  const strokeDashoffset = circumference - (simulatedRiskScore / 100) * circumference;
 
   const blockPresetList = ["Depalpur", "Sanwer", "Indore", "Mhow"];
 
@@ -233,7 +294,7 @@ function App() {
             </span>
           </div>
           <div className="text-[10px] text-slate-400 font-medium">
-            System Dashboard v2.0
+            System Dashboard v2.1
           </div>
         </div>
       </header>
@@ -248,13 +309,32 @@ function App() {
           <section>
             <h2 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-2">
               <Activity className="w-3.5 h-3.5" />
-              Live Telemetry (Simulated Baseline)
+              Live Telemetry Feed (Virtual Sensor Mode)
             </h2>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-4">
               <Card title="Water Level" value={`${sensorWaterLevel} ft`} />
               <Card title="pH" value={sensorPh} />
               <Card title="TDS" value={`${sensorTds} ppm`} />
               <Card title="Risk" value={sensorRisk} />
+            </div>
+
+            {/* VIRTUAL SENSOR CONSOLE (REAL-TIME CONSOLE SIMULATOR) */}
+            <div className="glass-card rounded p-4 flex flex-col shadow-inner">
+              <div className="flex justify-between items-center mb-2.5 pb-1.5 border-b border-slate-200/30">
+                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wide flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-sky-500 animate-pulse" />
+                  Sensor Control Room Console
+                </span>
+                <span className="text-[9px] text-slate-400 font-semibold uppercase font-mono">Baud Rate: 9600</span>
+              </div>
+              <div className="bg-[#09090b] rounded p-3 h-28 overflow-y-auto font-mono text-[10px] text-sky-400 space-y-1.5 scrollbar-thin select-none">
+                {consoleLogs.map((log, idx) => (
+                  <div key={idx} className="leading-relaxed opacity-95">
+                    {log}
+                  </div>
+                ))}
+                <div ref={consoleEndRef} />
+              </div>
             </div>
           </section>
 
@@ -394,51 +474,45 @@ function App() {
             </form>
           </section>
 
-          {/* WARD INTERACTION TABLE */}
+          {/* WARD RISK HEATMAP (TOPOLOGICAL GEOMETRIC GRID) */}
           <section className="glass-card rounded p-6 text-left">
             <h2 className="text-base font-bold text-slate-800 mb-1.5 flex items-center gap-2">
               <MapPin className="w-4 h-4 text-sky-500" />
-              Ward Stress Reference
+              Ward Risk Heatmap (Indore Spatial Matrix)
             </h2>
-            <p className="text-xs text-slate-400 mb-5">
-              Select any ward row below to populate target regional defaults and sync the forecast workspace.
+            <p className="text-xs text-slate-400 mb-4">
+              Visual risk distribution map of aquifer stress nodes. Click any grid cell to load it.
             </p>
 
-            <div className="overflow-x-auto">
-              <table className="w-full text-xs">
-                <thead>
-                  <tr className="border-b border-slate-200 pb-2 text-left">
-                    <th className="pb-2.5 text-slate-400 font-semibold uppercase tracking-wider">Ward Identification</th>
-                    <th className="pb-2.5 text-slate-400 font-semibold uppercase tracking-wider">Historical Baseline</th>
-                    <th className="pb-2.5 text-slate-400 font-semibold uppercase tracking-wider text-right">Action</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {wards.map((ward, index) => (
-                    <tr 
-                      key={index} 
-                      onClick={() => handleWardClick(ward.block)}
-                      className="group cursor-pointer hover:bg-white/40 transition-all duration-100"
-                    >
-                      <td className="py-2.5 text-slate-700 font-medium">{ward.name}</td>
-                      <td className="py-2.5">
-                        <span className={`px-2 py-0.5 rounded text-[9px] font-bold ${
-                          ward.risk === "HIGH" ? "text-red-700 bg-red-50 border border-red-100" :
-                          ward.risk === "MEDIUM" ? "text-amber-700 bg-amber-50 border border-amber-100" :
-                          "text-emerald-700 bg-emerald-50 border border-emerald-100"
-                        }`}>
-                          {ward.risk} RISK
-                        </span>
-                      </td>
-                      <td className="py-2.5 text-right">
-                        <span className="inline-flex items-center text-[10px] text-sky-600 font-semibold opacity-0 group-hover:opacity-100 transition-opacity duration-100 gap-0.5">
-                          Load Workspace <ChevronRight className="w-3 h-3" />
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              {heatmapSectors.map((sector, idx) => {
+                let riskBg = "bg-emerald-50 border-emerald-200 text-emerald-800";
+                if (sector.risk === "HIGH") {
+                  riskBg = "bg-rose-50 border-rose-200 text-rose-800";
+                } else if (sector.risk === "MEDIUM") {
+                  riskBg = "bg-amber-50 border-amber-200 text-amber-800";
+                }
+                const isSelected = block === sector.block;
+
+                return (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => handleWardClick(sector.block)}
+                    className={`p-3.5 rounded border text-left flex flex-col justify-between h-20 transition-all duration-200 select-none ${riskBg} ${
+                      isSelected ? "ring-2 ring-sky-500 ring-offset-2 scale-[1.01]" : "hover:brightness-95"
+                    }`}
+                  >
+                    <div className="flex justify-between items-center w-full">
+                      <span className="text-[10px] font-bold tracking-wider">{sector.code}</span>
+                      <span className="text-[8px] font-extrabold uppercase tracking-wide px-1.5 py-0.5 rounded bg-white/60">
+                        {sector.risk}
+                      </span>
+                    </div>
+                    <span className="text-xs font-bold truncate mt-2">{sector.name}</span>
+                  </button>
+                );
+              })}
             </div>
           </section>
 
@@ -523,14 +597,14 @@ function App() {
                     />
                   </svg>
                   <div className="absolute flex flex-col items-center justify-center">
-                    <span className="text-xl font-bold text-slate-800">{riskScore}</span>
+                    <span className="text-xl font-bold text-slate-800">{simulatedRiskScore}</span>
                     <span className="text-[8px] text-slate-400 font-bold uppercase tracking-wider">Points</span>
                   </div>
                 </div>
 
                 <div className="mt-3">
                   <span className={`text-[9px] font-bold px-2.5 py-0.5 rounded border ${riskColorClass}`}>
-                    {riskLevel} RISK
+                    {simulatedRiskLevel} RISK
                   </span>
                 </div>
               </div>
@@ -568,12 +642,12 @@ function App() {
             {/* KEY DATA BENCHMARKS */}
             <div className="p-4 rounded border border-slate-100 bg-white/40 divide-y divide-slate-100 space-y-3 shadow-sm">
               <div className="flex justify-between items-center text-xs">
-                <span className="text-slate-500 font-medium">30-Day Projections</span>
-                <span className="text-slate-800 font-bold">{predictedWaterLevel} ft</span>
+                <span className="text-slate-500 font-medium">Original ML Projection</span>
+                <span className="text-slate-500 font-semibold">{predictedWaterLevel} ft</span>
               </div>
               <div className="flex justify-between items-center text-xs pt-3">
-                <span className="text-slate-500 font-medium">Regional Average Depth</span>
-                <span className="text-slate-700 font-medium">{blockAvgDepth} m</span>
+                <span className="text-slate-700 font-bold">Simulated Projection</span>
+                <span className="text-sky-600 font-bold">{simulatedWaterLevel} ft</span>
               </div>
               <div className="flex justify-between items-center text-xs pt-3">
                 <span className="text-slate-500 font-medium">Model Status</span>
@@ -585,9 +659,63 @@ function App() {
 
           </section>
 
+          {/* "WHAT IF" SIMULATOR INTERVENTIONS */}
+          <section className="glass-card rounded p-6 text-left">
+            <div className="flex items-center justify-between mb-4 pb-2 border-b border-slate-200/50">
+              <h2 className="text-base font-bold text-slate-800 flex items-center gap-2">
+                <Compass className="w-4 h-4 text-sky-500" />
+                "What If" Policy Simulator
+              </h2>
+              <span className="text-[9px] font-extrabold uppercase px-2 py-0.5 rounded bg-sky-50 border border-sky-200 text-sky-700">
+                Rule-Based Delta
+              </span>
+            </div>
+
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-xs font-bold text-slate-800">Recharge Pit Program</div>
+                  <p className="text-[10px] text-slate-400">Simulate building recharge pit nets (depth -15%, stress -12 pts)</p>
+                </div>
+                <input 
+                  type="checkbox" 
+                  checked={rechargeProgram}
+                  onChange={(e) => setRechargeProgram(e.target.checked)}
+                  className="w-4 h-4 text-sky-600 border-slate-300 rounded focus:ring-sky-500"
+                />
+              </div>
+
+              <div className="flex items-center justify-between pt-2 border-t border-slate-100">
+                <div>
+                  <div className="text-xs font-bold text-slate-800">15% Extraction Cap Policy</div>
+                  <p className="text-[10px] text-slate-400">Simulate strict groundwater caps (depth -10%, stress -8 pts)</p>
+                </div>
+                <input 
+                  type="checkbox" 
+                  checked={extractionCap}
+                  onChange={(e) => setExtractionCap(e.target.checked)}
+                  className="w-4 h-4 text-sky-600 border-slate-300 rounded focus:ring-sky-500"
+                />
+              </div>
+
+              <div className="flex items-center justify-between pt-2 border-t border-slate-100">
+                <div>
+                  <div className="text-xs font-bold text-slate-800">Industrial Stress Test</div>
+                  <p className="text-[10px] text-slate-400">Simulate unmanaged commercial drawdowns (depth +25%, stress +15 pts)</p>
+                </div>
+                <input 
+                  type="checkbox" 
+                  checked={industrialStress}
+                  onChange={(e) => setIndustrialStress(e.target.checked)}
+                  className="w-4 h-4 text-sky-600 border-slate-300 rounded focus:ring-sky-500"
+                />
+              </div>
+            </div>
+          </section>
+
           {/* INTERVENTION RECOMMENDATION CENTER */}
           <section className="glass-card rounded p-6 text-left">
-            <h2 className="text-base font-bold text-slate-800 mb-4 flex items-center gap-2">
+            <h2 className="text-base font-bold text-white mb-4 flex items-center gap-2">
               <Award className="w-4 h-4 text-emerald-500" />
               Intervention Recommendations
             </h2>
