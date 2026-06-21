@@ -34,19 +34,26 @@ This guide walks you step-by-step through presenting the AquaSentinel Indore das
 
 ---
 
-## 📊 4. Aquifer Stress Score & Community Water Security Outlook
+## 📊 4. Groundwater Forecast Analysis & Community Outlook
 *(Focus on the right section of the dashboard)*
 
 ![Groundwater Forecast Analysis](images/forecast_analysis.png)
 
-*   **What it is**: The circular visual stress gauge and the human-centric community metrics panel.
+*   **What it is**: The circular stress score gauge, the human-centric community metrics panel, and the 3-column projection KPI grid.
 *   **Script to say**:
-    > *"Now let’s look at our **Groundwater Forecast Analysis** on the right. The first KPI card is the **Aquifer Stress Score**. This 100-point index is calculated dynamically by our backend machine learning models. It combines the current water table depth, seasonal drawdowns, and local stress factors to give engineers a single, readable score. 
+    > *"Now let’s look at our **Groundwater Forecast Analysis** on the right. 
+    > 
+    > The first KPI card is the **Aquifer Stress Score**. This 100-point index is calculated dynamically by our backend machine learning models. It combines the current water table depth, seasonal drawdowns, and local stress factors to give engineers a single, readable score.
     > 
     > Next to the stress gauge is our **Community Water Security Outlook**. We created this card to translate abstract water measurements into human terms:
     > 1. **Population Dependent**: Shows the exact number of residents who rely on this specific aquifer (from 185,000 in Sanwer to 1.45 million in Central Indore).
-    > 2. **Aquifer Runway Outlook**: Tells us exactly how many years of water supply are left in the aquifer before it reaches critical depletion under current pumping behaviors.
-    > 3. **Groundwater Health Index**: A 0-to-100 rating of the aquifer's sustainability, factoring in water quality (pH, TDS) and volume."*
+    > 2. **Aquifer Runway Outlook**: Tells us exactly how many years of water supply are left in the aquifer before it reaches critical depletion under current pumping behaviors (highlighting a Stressed or Critical badge status).
+    > 3. **Groundwater Health Index**: A 0-to-100 rating of the aquifer's sustainability, factoring in water quality (pH, TDS) and volume.
+    > 
+    > At the bottom of this panel, we have a 3-column comparative view:
+    > *   **Original ML**: The baseline projected water table depth for this season.
+    > *   **Simulated**: The live calculated depth factoring in any policies currently selected in our simulator. It dynamically calculates the difference and shows green or red changes.
+    > *   **Model Status**: A real-time pulsing indicator confirming that the forecasting engine is fully active."*
 
 ---
 
@@ -65,14 +72,16 @@ This guide walks you step-by-step through presenting the AquaSentinel Indore das
 
 ---
 
-## 📋 7. ML Projections & Recommendations
-*(Focus on the bottom-right cards)*
+## 📋 7. Dynamic Recommendations & Interventions
+*(Focus on the bottom-right recommendations panel)*
 
-*   **What it is**: Comparison cards showing Original vs. Simulated water levels, and dynamically generated advice.
-*   **The visual elements**: A 3-column projection grid showing the baseline ML depth vs. the simulated depth with active policies (featuring a green down arrow `↓` or red up arrow `↑` for the delta). Below it are custom-badged intervention recommendation cards (RECHARGE, DEMAND, MONITOR).
+*   **What it is**: System-generated advice cards tailored to the current block's risk profile.
 *   **Script to say**:
-    > *"At the bottom, we compare our **Original ML Projection** against the **Simulated Projection**. If our simulated policies are successful, a green indicator shows the depth reduction (e.g., water table rising closer to the surface by 4.2 feet).
-    > Finally, the system automatically outputs tailored **Intervention Recommendations**. If the risk is high, it generates urgent directives like 'Construct recharge pits' (a Recharge intervention) or 'Reduce extraction by 10%' (a Demand intervention), giving decision-makers clear actionable next steps."*
+    > *"Finally, based on the forecasted risk level and policy simulations, the dashboard automatically outputs tailored **Intervention Recommendations**. If the risk is high or critical, the engine generates urgent directives:
+    > *   **RECHARGE** recommendations: e.g., 'Construct recharge pits in high-risk wards'.
+    > *   **DEMAND** interventions: e.g., 'Reduce groundwater extraction by 10%' to slow depletion.
+    > *   **MONITOR** directives: e.g., 'Increase monitoring frequency' to secure telemetry.
+    > This gives decision-makers and municipal engineers clear, categorized, and actionable next steps at a glance."*
 
 ---
 
