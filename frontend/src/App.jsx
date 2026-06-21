@@ -24,7 +24,7 @@ function App() {
     "System booted. Initializing aquifer telemetry links...",
     "Live telemetry feed online. Station ID: IMC-AQ-452"
   ]);
-  const consoleEndRef = useRef(null);
+  const consoleContainerRef = useRef(null);
 
   // AI Prediction Inputs (Real / Forecast System)
   const [block, setBlock] = useState("Depalpur");
@@ -187,9 +187,11 @@ function App() {
     return () => clearInterval(interval);
   }, []);
 
-  // Auto-scroll the virtual sensor log console
+  // Auto-scroll the virtual sensor log console container
   useEffect(() => {
-    consoleEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (consoleContainerRef.current) {
+      consoleContainerRef.current.scrollTop = consoleContainerRef.current.scrollHeight;
+    }
   }, [consoleLogs]);
 
   // Calculate "What If" simulation values
@@ -327,13 +329,15 @@ function App() {
                 </span>
                 <span className="text-[9px] text-slate-400 font-semibold uppercase font-mono">Baud Rate: 9600</span>
               </div>
-              <div className="bg-[#09090b] rounded p-3 h-28 overflow-y-auto font-mono text-[10px] text-sky-400 space-y-1.5 scrollbar-thin select-none">
+              <div 
+                ref={consoleContainerRef}
+                className="bg-[#09090b] rounded p-3 h-28 overflow-y-auto font-mono text-[10px] text-sky-400 space-y-1.5 scrollbar-thin select-none"
+              >
                 {consoleLogs.map((log, idx) => (
                   <div key={idx} className="leading-relaxed opacity-95">
                     {log}
                   </div>
                 ))}
-                <div ref={consoleEndRef} />
               </div>
             </div>
           </section>
