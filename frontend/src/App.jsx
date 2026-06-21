@@ -91,7 +91,8 @@ function App() {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch("http://localhost:8000/predict", {
+      const apiBase = import.meta.env.VITE_API_URL || "https://aquasentinel-indore-sgo8.onrender.com";
+      const response = await fetch(`${apiBase}/predict`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
