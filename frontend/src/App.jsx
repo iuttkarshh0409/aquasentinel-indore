@@ -76,8 +76,8 @@ function InteractiveMap({ activeBlock, onBlockSelect, simulatedRiskLevel, riskSc
         attributionControl: false,
       });
 
-      // Richer, high-contrast OSM Hot map tiles (features warm/vibrant colors)
-      L.tileLayer("https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png", {
+      // CartoDB Voyager map tiles (English labels globally, enhanced with class-based CSS filters)
+      L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png", {
         maxZoom: 19,
         className: "map-tiles"
       }).addTo(map);
