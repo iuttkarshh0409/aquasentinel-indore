@@ -159,16 +159,16 @@ function InteractiveMap({ activeBlock, onBlockSelect, simulatedRiskLevel, riskSc
 // MAIN APP COMPONENT
 // ====================================================================
 function App() {
-  // Live Sensor Data (Demo Mode / Simulated)
+  // Groundwater Indicators (Simulated Interface)
   const [sensorWaterLevel, setSensorWaterLevel] = useState(23.0);
   const [sensorPh, setSensorPh] = useState(7.4);
   const [sensorTds, setSensorTds] = useState(450);
   const [sensorRisk, setSensorRisk] = useState("LOW");
 
-  // Virtual Sensor Control Room Console Logs Feed
+  // Virtual Observation Logs Console Feed
   const [consoleLogs, setConsoleLogs] = useState([
-    "System booted. Initializing aquifer telemetry links...",
-    "Live telemetry feed online. Station ID: IMC-AQ-452"
+    "System booted. Initializing observation station feed...",
+    "Observation feed online. Station ID: IMC-AQ-452"
   ]);
   const consoleContainerRef = useRef(null);
 
@@ -186,9 +186,9 @@ function App() {
   const [riskScore, setRiskScore] = useState(72);
   const [riskLevel, setRiskLevel] = useState("HIGH");
   const [recommendations, setRecommendations] = useState([
-    "Construct recharge pits in high-risk wards",
+    "Construct recharge pits in high-risk groundwater blocks",
     "Reduce groundwater extraction by 10%",
-    "Increase monitoring frequency",
+    "Increase groundwater observation frequency",
     "Promote rainwater harvesting"
   ]);
 
@@ -306,7 +306,7 @@ function App() {
       const timestamp = new Date().toLocaleTimeString();
       const zones = ["Zone-A (Depalpur)", "Zone-N (Sanwer)", "Central (Indore)", "Heights (Mhow)"];
       const targetZone = zones[Math.floor(Math.random() * zones.length)];
-      const logMessage = `[${timestamp}] Telemetry synced from ${targetZone} • pH: ${phValue} • TDS: ${tdsValue}ppm • Level: ${level}ft [${currentRisk} RISK]`;
+      const logMessage = `[${timestamp}] Observation synced from ${targetZone} • pH: ${phValue} • TDS: ${tdsValue}ppm • Level: ${level}ft [${currentRisk} RISK]`;
 
       setConsoleLogs((prev) => {
         const newLogs = [...prev, logMessage];
@@ -474,7 +474,7 @@ function App() {
           <section>
             <h2 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-2">
               <Activity className="w-3.5 h-3.5" />
-              Live Telemetry Feed (Virtual Sensor Mode)
+              Simulated Telemetry Feed (Indicator Demonstration)
             </h2>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-4">
               <Card title="Water Level" value={`${sensorWaterLevel} ft`} />
@@ -487,9 +487,8 @@ function App() {
               <div className="flex justify-between items-center mb-2.5 pb-1.5 border-b border-slate-200/30">
                 <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wide flex items-center gap-1.5">
                   <span className="w-2 h-2 rounded-full bg-sky-500 animate-pulse" />
-                  Sensor Control Room Console
+                  Observation Station Simulation Feed
                 </span>
-                <span className="text-[9px] text-slate-400 font-semibold uppercase font-mono">Baud Rate: 9600</span>
               </div>
               <div 
                 ref={consoleContainerRef}
@@ -640,14 +639,14 @@ function App() {
             </form>
           </section>
 
-          {/* WARD RISK HEATMAP (INTERACTIVE LEAFLET GIS MAP) */}
+          {/* GROUNDWATER RISK MAP (INTERACTIVE LEAFLET GIS MAP) */}
           <section className="glass-card rounded p-6 text-left">
             <h2 className="text-base font-bold text-slate-800 mb-1.5 flex items-center gap-2">
               <MapPin className="w-4 h-4 text-sky-500" />
-              Ward Risk Heatmap (Indore Aquifer Zones)
+              Groundwater Risk Map (Indore Aquifer Blocks)
             </h2>
             <p className="text-xs text-slate-400 mb-4">
-              Real-time interactive GIS map of Indore groundwater regions. Click any aquifer zone circle to sync the workspace.
+              Interactive GIS map of Indore groundwater blocks. Click any aquifer zone circle to sync the workspace.
             </p>
 
             <InteractiveMap 
@@ -753,14 +752,14 @@ function App() {
                 </span>
                 
                 <div className="space-y-2.5">
-                  {/* Metric 1: Population Dependent */}
+                  {/* Metric 1: Estimated Population */}
                   <div className="flex items-center justify-between p-2 rounded-lg border border-slate-100/80 bg-white/60">
                     <div className="flex items-center gap-2.5">
                       <div className="p-1.5 rounded bg-sky-50 text-sky-600">
                         <Users className="w-3.5 h-3.5" />
                       </div>
                       <div>
-                        <div className="text-[8px] text-slate-400 font-bold uppercase">Population Dependent</div>
+                        <div className="text-[8px] text-slate-400 font-bold uppercase">Estimated Population</div>
                         <div className="text-xs font-extrabold text-slate-700 mt-0.5">{blockPopulation[block] || "280,000 residents"}</div>
                       </div>
                     </div>
@@ -776,8 +775,8 @@ function App() {
                         <Hourglass className="w-3.5 h-3.5" />
                       </div>
                       <div>
-                        <div className="text-[8px] text-slate-400 font-bold uppercase">Aquifer Runway Outlook</div>
-                        <div className="text-xs font-extrabold text-slate-700 mt-0.5">{simulatedRunway.toFixed(1)} Years Remaining</div>
+                        <div className="text-[8px] text-slate-400 font-bold uppercase">Sustainability Runway Outlook</div>
+                        <div className="text-xs font-extrabold text-slate-700 mt-0.5">Indicative Score: {simulatedRunway.toFixed(1)}</div>
                       </div>
                     </div>
                     <span className={`text-[8px] font-extrabold uppercase px-1.5 py-0.5 rounded border ${
