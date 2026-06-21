@@ -13,6 +13,8 @@ This guide walks you step-by-step through presenting the AquaSentinel Indore das
 ## 🖥️ 2. Live Telemetry Feed (Virtual Sensor Mode)
 *(Focus on the top-left section of the dashboard)*
 
+![Live Telemetry Feed](images/telemetry_feed.png)
+
 *   **What it is**: A live dashboard representing incoming data from sensors placed in the field.
 *   **The visual elements**: Four key metric cards: **Water Level**, **pH**, **TDS (Total Dissolved Solids)**, and **Risk**. Below them is a dark, terminal-style **Sensor Control Room Console** scrolling live logs.
 *   **Script to say**:
