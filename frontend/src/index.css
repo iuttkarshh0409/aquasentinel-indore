@@ -52,3 +52,9 @@
 .linear-input {
   @apply bg-white/70 border border-slate-200/80 text-slate-800 px-3.5 py-2 rounded focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 transition-all duration-150 text-sm shadow-sm placeholder-slate-400;
 }
+
+/* Custom map tiles filter for enhanced vibrancy */
+.map-tiles {
+  filter: saturate(1.4) contrast(1.1) brightness(0.96);
+}
+

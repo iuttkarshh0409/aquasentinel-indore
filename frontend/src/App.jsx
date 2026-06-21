@@ -7,9 +7,11 @@ import {
   TrendingUp, 
   RefreshCw, 
   MapPin, 
-  Compass
+  Compass,
+  Users,
+  Hourglass,
+  Heart
 } from "lucide-react";
-import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import L from "leaflet";
 import Card from "./components/Card";
 
@@ -29,31 +31,65 @@ function InteractiveMap({ activeBlock, onBlockSelect, simulatedRiskLevel, riskSc
     { name: "Mhow", coords: [22.5519, 75.7536], baseRadius: 5400 },
   ];
 
+  // Utility to calculate styles based on block status and active threats
+  const getBlockStyle = (blockName, isActive) => {
+    let fillColor;
+    let borderColor;
+    
+    // Default static risk profile for background mapping
+    let risk = "LOW";
+    if (blockName === "Depalpur" || blockName === "Sanwer") {
+      risk = "HIGH";
+    } else if (blockName === "Indore") {
+      risk = "MEDIUM";
+    }
+
+    // Override active block with the live computed simulated risk level
+    const targetRisk = isActive ? simulatedRiskLevel : risk;
+
+    if (targetRisk === "CRITICAL" || targetRisk === "HIGH") {
+      fillColor = "#f43f5e"; // Vibrant Rose
+      borderColor = "#be123c"; // Crimson Border
+    } else if (targetRisk === "MEDIUM") {
+      fillColor = "#f59e0b"; // Rich Amber
+      borderColor = "#b45309"; // Dark Amber Border
+    } else {
+      fillColor = "#10b981"; // Vibrant Emerald
+      borderColor = "#047857"; // Dark Emerald Border
+    }
+
+    return {
+      fillColor,
+      color: isActive ? "#0284c7" : borderColor,
+      weight: isActive ? 3 : 1.5,
+      fillOpacity: isActive ? 0.75 : 0.45,
+    };
+  };
+
   // Initialize Map
   useEffect(() => {
     if (!mapInstanceRef.current && mapRef.current) {
       const map = L.map(mapRef.current, {
-        center: [22.78, 75.74], // Center covers all active blocks
+        center: [22.78, 75.74],
         zoom: 9.5,
         zoomControl: false,
         attributionControl: false,
       });
 
-      // Clean light-mode open-source CartoDB map tiles
-      L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
+      // Richer, high-contrast OSM Hot map tiles (features warm/vibrant colors)
+      L.tileLayer("https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png", {
         maxZoom: 19,
+        className: "map-tiles"
       }).addTo(map);
 
       mapInstanceRef.current = map;
 
       // Draw Interactive Aquifer Zones
       blocksConfig.forEach((blk) => {
+        const initialStyle = getBlockStyle(blk.name, activeBlock === blk.name);
         const circle = L.circle(blk.coords, {
           radius: blk.baseRadius,
-          color: "#94a3b8",
-          weight: 1,
-          fillColor: "#cbd5e1",
-          fillOpacity: 0.4,
+          ...initialStyle
         }).addTo(map);
 
         // Click Handler
@@ -63,22 +99,18 @@ function InteractiveMap({ activeBlock, onBlockSelect, simulatedRiskLevel, riskSc
 
         // Hover Animations
         circle.on("mouseover", () => {
-          circle.setStyle({ fillOpacity: 0.65, weight: 1.5, color: "#0284c7" });
+          circle.setStyle({ fillOpacity: 0.85, weight: 3, color: "#0284c7" });
         });
         circle.on("mouseout", () => {
-          const isActive = activeBlock === blk.name;
-          circle.setStyle({
-            fillOpacity: isActive ? 0.6 : 0.4,
-            weight: isActive ? 2 : 1,
-            color: isActive ? "#0284c7" : "#cbd5e1",
-          });
+          const updatedStyle = getBlockStyle(blk.name, activeBlock === blk.name);
+          circle.setStyle(updatedStyle);
         });
 
         // Tooltip
         circle.bindTooltip(`<b>${blk.name} Block</b><br/>Click to target zone`, {
           direction: "top",
           permanent: false,
-          opacity: 0.9,
+          opacity: 0.95,
         });
 
         circlesRef.current[blk.name] = circle;
@@ -101,31 +133,8 @@ function InteractiveMap({ activeBlock, onBlockSelect, simulatedRiskLevel, riskSc
         const circle = circlesRef.current[blk.name];
         if (circle) {
           const isActive = activeBlock === blk.name;
-          
-          let color = "#10b981"; // Nominal Low Risk: Emerald
-          if (isActive) {
-            if (simulatedRiskLevel === "CRITICAL" || simulatedRiskLevel === "HIGH") {
-              color = "#ef4444"; // Red
-            } else if (simulatedRiskLevel === "MEDIUM") {
-              color = "#f59e0b"; // Amber
-            }
-          } else {
-            // Default baselines for inactive blocks
-            if (blk.name === "Depalpur" || blk.name === "Sanwer") {
-              color = "#f87171"; // Moderate-High
-            } else if (blk.name === "Indore") {
-              color = "#fbbf24"; // Moderate
-            } else {
-              color = "#34d399"; // Low
-            }
-          }
-
-          circle.setStyle({
-            fillColor: color,
-            fillOpacity: isActive ? 0.6 : 0.3,
-            color: isActive ? "#0284c7" : "#cbd5e1",
-            weight: isActive ? 2.5 : 1,
-          });
+          const updatedStyle = getBlockStyle(blk.name, isActive);
+          circle.setStyle(updatedStyle);
 
           if (isActive) {
             circle.openTooltip();
@@ -186,7 +195,17 @@ function App() {
   // "What If" Simulator Policy Toggles
   const [rechargeProgram, setRechargeProgram] = useState(false);
   const [extractionCap, setExtractionCap] = useState(false);
+  const [rainwaterHarvesting, setRainwaterHarvesting] = useState(false);
   const [industrialStress, setIndustrialStress] = useState(false);
+  const [urbanConcreteCover, setUrbanConcreteCover] = useState(false);
+  const [expandedPolicies, setExpandedPolicies] = useState({});
+
+  const togglePolicyExpand = (key) => {
+    setExpandedPolicies(prev => ({
+      ...prev,
+      [key]: !prev[key]
+    }));
+  };
   
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -318,13 +337,21 @@ function App() {
     simulatedWaterLevel = Number((simulatedWaterLevel * 0.90).toFixed(2));
     simulatedRiskScore = Math.max(0, simulatedRiskScore - 8);
   }
+  if (rainwaterHarvesting) {
+    simulatedWaterLevel = Number((simulatedWaterLevel * 0.92).toFixed(2));
+    simulatedRiskScore = Math.max(0, simulatedRiskScore - 6);
+  }
   if (industrialStress) {
     simulatedWaterLevel = Number((simulatedWaterLevel * 1.25).toFixed(2));
     simulatedRiskScore = Math.min(100, simulatedRiskScore + 15);
   }
+  if (urbanConcreteCover) {
+    simulatedWaterLevel = Number((simulatedWaterLevel * 1.18).toFixed(2));
+    simulatedRiskScore = Math.min(100, simulatedRiskScore + 10);
+  }
 
   let simulatedRiskLevel = riskLevel;
-  if (rechargeProgram || extractionCap || industrialStress) {
+  if (rechargeProgram || extractionCap || rainwaterHarvesting || industrialStress || urbanConcreteCover) {
     if (simulatedRiskScore >= 75) {
       simulatedRiskLevel = "CRITICAL";
     } else if (simulatedRiskScore >= 60) {
@@ -336,14 +363,43 @@ function App() {
     }
   }
 
-  // Prepare chart data for Recharts
-  const chartData = [
-    { name: "Historical", level: Number(currentWaterLevel) * 1.1 },
-    { name: "Current Baseline", level: Number(currentWaterLevel) },
-    { name: "ML Forecast", level: Number(predictedWaterLevel) },
-    { name: "Simulated Model", level: Number(simulatedWaterLevel) }
-  ];
+  const blockPopulation = {
+    Depalpur: "215,000 residents",
+    Sanwer: "185,000 residents",
+    Indore: "1,450,000 residents",
+    Mhow: "280,000 residents"
+  };
 
+  let baseRunway = 10;
+  if (block === "Depalpur" || block === "Sanwer") {
+    baseRunway = 6.5;
+  } else if (block === "Indore") {
+    baseRunway = 12.0;
+  } else if (block === "Mhow") {
+    baseRunway = 8.5;
+  }
+
+  let simulatedRunway = baseRunway;
+  if (rechargeProgram) simulatedRunway += 4.5;
+  if (extractionCap) simulatedRunway += 3.0;
+  if (rainwaterHarvesting) simulatedRunway += 1.5;
+  if (industrialStress) simulatedRunway -= 4.0;
+  if (urbanConcreteCover) simulatedRunway -= 2.5;
+  simulatedRunway = Math.max(1.5, Math.min(30, simulatedRunway));
+
+  const groundwaterHealthScore = Math.max(0, Math.min(100, 100 - simulatedRiskScore));
+  let healthLabel = "Excellent";
+  let healthColor = "text-emerald-700 bg-emerald-50 border-emerald-200";
+  if (groundwaterHealthScore < 40) {
+    healthLabel = "Critical / Degraded";
+    healthColor = "text-red-700 bg-red-50 border-red-200";
+  } else if (groundwaterHealthScore < 60) {
+    healthLabel = "Moderate Stress";
+    healthColor = "text-amber-700 bg-amber-50 border-amber-200";
+  } else if (groundwaterHealthScore < 80) {
+    healthLabel = "Stable / Good";
+    healthColor = "text-sky-700 bg-sky-50 border-sky-200";
+  }
   // Determine risk theme colors
   let riskColorClass = "text-slate-600 border-slate-200 bg-slate-100";
   let gaugeStroke = "#0284c7";
@@ -691,47 +747,115 @@ function App() {
                 </div>
               </div>
 
-              <div className="flex flex-col p-4 rounded border border-slate-100 bg-white/40 min-h-[140px]">
-                <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider mb-2">
-                  Forecast Trajectory (ft)
+              <div className="flex flex-col p-4 rounded border border-slate-100 bg-white/40 min-h-[195px] justify-between text-left">
+                <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider mb-3">
+                  Community Water Security Outlook
                 </span>
                 
-                <div className="w-full flex-grow mt-2">
-                  <ResponsiveContainer width="100%" height={80}>
-                    <AreaChart data={chartData} margin={{ top: 5, right: 5, left: -25, bottom: 0 }}>
-                      <defs>
-                        <linearGradient id="colorLevelLight" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#0284c7" stopOpacity={0.15}/>
-                          <stop offset="95%" stopColor="#0284c7" stopOpacity={0}/>
-                        </linearGradient>
-                      </defs>
-                      <XAxis dataKey="name" stroke="#64748b" fontSize={8} tickLine={false} />
-                      <YAxis stroke="#64748b" fontSize={8} tickLine={false} domain={['auto', 'auto']} />
-                      <Tooltip 
-                        contentStyle={{ backgroundColor: "#ffffff", borderColor: "#e2e8f0", borderRadius: "4px" }}
-                        labelStyle={{ color: "#475569", fontSize: "10px" }}
-                        itemStyle={{ color: "#0284c7", fontSize: "10px" }}
-                      />
-                      <Area type="monotone" dataKey="level" stroke="#0284c7" strokeWidth={1.5} fillOpacity={1} fill="url(#colorLevelLight)" />
-                    </AreaChart>
-                  </ResponsiveContainer>
+                <div className="space-y-2.5">
+                  {/* Metric 1: Population Dependent */}
+                  <div className="flex items-center justify-between p-2 rounded-lg border border-slate-100/80 bg-white/60">
+                    <div className="flex items-center gap-2.5">
+                      <div className="p-1.5 rounded bg-sky-50 text-sky-600">
+                        <Users className="w-3.5 h-3.5" />
+                      </div>
+                      <div>
+                        <div className="text-[8px] text-slate-400 font-bold uppercase">Population Dependent</div>
+                        <div className="text-xs font-extrabold text-slate-700 mt-0.5">{blockPopulation[block] || "280,000 residents"}</div>
+                      </div>
+                    </div>
+                    <span className="text-[8px] font-extrabold uppercase px-1.5 py-0.5 rounded bg-slate-100 text-slate-500 border border-slate-200">
+                      Local Aquifer
+                    </span>
+                  </div>
+
+                  {/* Metric 2: Sustainability Runway */}
+                  <div className="flex items-center justify-between p-2 rounded-lg border border-slate-100/80 bg-white/60">
+                    <div className="flex items-center gap-2.5">
+                      <div className="p-1.5 rounded bg-amber-50 text-amber-600">
+                        <Hourglass className="w-3.5 h-3.5" />
+                      </div>
+                      <div>
+                        <div className="text-[8px] text-slate-400 font-bold uppercase">Aquifer Runway Outlook</div>
+                        <div className="text-xs font-extrabold text-slate-700 mt-0.5">{simulatedRunway.toFixed(1)} Years Remaining</div>
+                      </div>
+                    </div>
+                    <span className={`text-[8px] font-extrabold uppercase px-1.5 py-0.5 rounded border ${
+                      simulatedRunway >= 12 ? "text-emerald-700 bg-emerald-50 border-emerald-200" :
+                      simulatedRunway >= 6 ? "text-amber-700 bg-amber-50 border-amber-200" :
+                      "text-red-700 bg-red-50 border-red-200"
+                    }`}>
+                      {simulatedRunway >= 12 ? "Sustainable" : simulatedRunway >= 6 ? "Stressed" : "Critical"}
+                    </span>
+                  </div>
+
+                  {/* Metric 3: Health Score */}
+                  <div className="flex items-center justify-between p-2 rounded-lg border border-slate-100/80 bg-white/60">
+                    <div className="flex items-center gap-2.5">
+                      <div className="p-1.5 rounded bg-emerald-50 text-emerald-600">
+                        <Heart className="w-3.5 h-3.5" />
+                      </div>
+                      <div>
+                        <div className="text-[8px] text-slate-400 font-bold uppercase">Groundwater Health Index</div>
+                        <div className="text-xs font-extrabold text-slate-700 mt-0.5">{groundwaterHealthScore} / 100 Points</div>
+                      </div>
+                    </div>
+                    <span className={`text-[8px] font-extrabold uppercase px-1.5 py-0.5 rounded border ${healthColor}`}>
+                      {healthLabel}
+                    </span>
+                  </div>
                 </div>
               </div>
 
             </div>
 
-            <div className="p-4 rounded border border-slate-100 bg-white/40 divide-y divide-slate-100 space-y-3 shadow-sm">
-              <div className="flex justify-between items-center text-xs">
-                <span className="text-slate-500 font-medium">Original ML Projection</span>
-                <span className="text-slate-500 font-semibold">{predictedWaterLevel} ft</span>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {/* Card 1: Original ML */}
+              <div className="p-3.5 rounded-lg border border-slate-100/80 bg-white/50 hover:bg-white/80 transition-all duration-200 flex flex-col justify-between shadow-sm relative overflow-hidden group">
+                <div className="absolute top-0 left-0 w-1 h-full bg-slate-300 group-hover:bg-slate-400 transition-colors" />
+                <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider pl-1">
+                  Original ML
+                </span>
+                <span className="text-sm font-bold text-slate-700 pl-1 mt-2.5">
+                  {predictedWaterLevel} <span className="text-[10px] font-normal text-slate-400">ft</span>
+                </span>
               </div>
-              <div className="flex justify-between items-center text-xs pt-3">
-                <span className="text-slate-700 font-bold">Simulated Projection</span>
-                <span className="text-sky-600 font-bold">{simulatedWaterLevel} ft</span>
+              
+              {/* Card 2: Simulated */}
+              <div className="p-3.5 rounded-lg border border-slate-200/80 bg-sky-50/20 hover:bg-sky-50/40 transition-all duration-200 flex flex-col justify-between shadow-sm relative overflow-hidden group">
+                <div className="absolute top-0 left-0 w-1 h-full bg-sky-500" />
+                <span className="text-[9px] text-sky-600 font-bold uppercase tracking-wider pl-1">
+                  Simulated
+                </span>
+                <div className="pl-1 mt-2.5 flex flex-col">
+                  <span className="text-sm font-bold text-sky-700">
+                    {simulatedWaterLevel} <span className="text-[10px] font-normal text-sky-400">ft</span>
+                  </span>
+                  {/* Delta Indicator */}
+                  {simulatedWaterLevel !== predictedWaterLevel ? (
+                    <span className={`text-[9px] font-bold mt-1 inline-flex items-center gap-0.5 ${
+                      simulatedWaterLevel < predictedWaterLevel ? "text-emerald-600" : "text-rose-600"
+                    }`}>
+                      {simulatedWaterLevel < predictedWaterLevel ? "↓" : "↑"} 
+                      {Math.abs(simulatedWaterLevel - predictedWaterLevel).toFixed(2)} ft
+                    </span>
+                  ) : (
+                    <span className="text-[8px] text-slate-400 font-medium mt-1">No policy active</span>
+                  )}
+                </div>
               </div>
-              <div className="flex justify-between items-center text-xs pt-3">
-                <span className="text-slate-500 font-medium">Model Status</span>
-                <span className="text-emerald-600 font-bold uppercase text-[9px] tracking-wider">
+
+              {/* Card 3: Model Status */}
+              <div className="p-3.5 rounded-lg border border-slate-100/80 bg-white/50 hover:bg-white/80 transition-all duration-200 flex flex-col justify-between shadow-sm relative overflow-hidden group">
+                <div className="absolute top-0 left-0 w-1 h-full bg-emerald-400 group-hover:bg-emerald-500 transition-colors" />
+                <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider pl-1">
+                  Model Status
+                </span>
+                <span className="text-sm font-bold pl-1 mt-2.5 text-emerald-600 inline-flex items-center gap-1.5">
+                  <span className="relative flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                  </span>
                   Active
                 </span>
               </div>
@@ -750,45 +874,190 @@ function App() {
                 Rule-Based Delta
               </span>
             </div>
-
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="text-xs font-bold text-slate-800">Recharge Pit Program</div>
-                  <p className="text-[10px] text-slate-400">Simulate building recharge pit nets (depth -15%, stress -12 pts)</p>
+            <div className="space-y-3">
+              {/* Option 1: Recharge Pits (Positive) */}
+              <div 
+                onClick={() => togglePolicyExpand("recharge")}
+                className="flex flex-col gap-1.5 p-2 rounded hover:bg-slate-200/20 transition-colors duration-150 cursor-pointer"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 pr-4">
+                    <span className="text-[8px] text-slate-400 select-none w-3">
+                      {expandedPolicies["recharge"] ? "▼" : "▶"}
+                    </span>
+                    <div className="text-xs font-bold text-slate-800">Recharge Pit Net Program (Positive)</div>
+                  </div>
+                  <input 
+                    type="checkbox" 
+                    checked={rechargeProgram}
+                    onClick={(e) => e.stopPropagation()}
+                    onChange={(e) => setRechargeProgram(e.target.checked)}
+                    className="w-4 h-4 text-sky-600 border-slate-300 rounded focus:ring-sky-500 shrink-0 cursor-pointer"
+                  />
                 </div>
-                <input 
-                  type="checkbox" 
-                  checked={rechargeProgram}
-                  onChange={(e) => setRechargeProgram(e.target.checked)}
-                  className="w-4 h-4 text-sky-600 border-slate-300 rounded focus:ring-sky-500"
-                />
+                <AnimatePresence initial={false}>
+                  {expandedPolicies["recharge"] && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: "auto", opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      transition={{ duration: 0.15 }}
+                      className="overflow-hidden pl-5 pr-8"
+                    >
+                      <p className="text-[10.5px] text-slate-500 leading-normal pb-1">
+                        Build specialized gravel-filled pits throughout the city. These capture monsoon rains and guide the water directly down to refill underground layers naturally (reduces water depth by 15% and aquifer stress by 12 points).
+                      </p>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
 
-              <div className="flex items-center justify-between pt-2 border-t border-slate-100">
-                <div>
-                  <div className="text-xs font-bold text-slate-800">15% Extraction Cap Policy</div>
-                  <p className="text-[10px] text-slate-400">Simulate strict groundwater caps (depth -10%, stress -8 pts)</p>
+              {/* Option 2: Extraction Cap (Positive) */}
+              <div 
+                onClick={() => togglePolicyExpand("extraction")}
+                className="flex flex-col gap-1.5 p-2 rounded hover:bg-slate-200/20 transition-colors duration-150 cursor-pointer pt-3 border-t border-slate-100"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 pr-4">
+                    <span className="text-[8px] text-slate-400 select-none w-3">
+                      {expandedPolicies["extraction"] ? "▼" : "▶"}
+                    </span>
+                    <div className="text-xs font-bold text-slate-800">Strict Pumping Limits / 15% Cap (Positive)</div>
+                  </div>
+                  <input 
+                    type="checkbox" 
+                    checked={extractionCap}
+                    onClick={(e) => e.stopPropagation()}
+                    onChange={(e) => setExtractionCap(e.target.checked)}
+                    className="w-4 h-4 text-sky-600 border-slate-300 rounded focus:ring-sky-500 shrink-0 cursor-pointer"
+                  />
                 </div>
-                <input 
-                  type="checkbox" 
-                  checked={extractionCap}
-                  onChange={(e) => setExtractionCap(e.target.checked)}
-                  className="w-4 h-4 text-sky-600 border-slate-300 rounded focus:ring-sky-500"
-                />
+                <AnimatePresence initial={false}>
+                  {expandedPolicies["extraction"] && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: "auto", opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      transition={{ duration: 0.15 }}
+                      className="overflow-hidden pl-5 pr-8"
+                    >
+                      <p className="text-[10.5px] text-slate-500 leading-normal pb-1">
+                        Set clear, enforceable limits on how much water public and private tube wells can extract daily. This directly slows down the rate of groundwater depletion (reduces water depth by 10% and aquifer stress by 8 points).
+                      </p>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
 
-              <div className="flex items-center justify-between pt-2 border-t border-slate-100">
-                <div>
-                  <div className="text-xs font-bold text-slate-800">Industrial Stress Test</div>
-                  <p className="text-[10px] text-slate-400">Simulate unmanaged commercial drawdowns (depth +25%, stress +15 pts)</p>
+              {/* Option 3: Rainwater Harvesting (Positive) */}
+              <div 
+                onClick={() => togglePolicyExpand("rainwater")}
+                className="flex flex-col gap-1.5 p-2 rounded hover:bg-slate-200/20 transition-colors duration-150 cursor-pointer pt-3 border-t border-slate-100"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 pr-4">
+                    <span className="text-[8px] text-slate-400 select-none w-3">
+                      {expandedPolicies["rainwater"] ? "▼" : "▶"}
+                    </span>
+                    <div className="text-xs font-bold text-slate-800">Rainwater Harvesting Mandate (Positive)</div>
+                  </div>
+                  <input 
+                    type="checkbox" 
+                    checked={rainwaterHarvesting}
+                    onClick={(e) => e.stopPropagation()}
+                    onChange={(e) => setRainwaterHarvesting(e.target.checked)}
+                    className="w-4 h-4 text-sky-600 border-slate-300 rounded focus:ring-sky-500 shrink-0 cursor-pointer"
+                  />
                 </div>
-                <input 
-                  type="checkbox" 
-                  checked={industrialStress}
-                  onChange={(e) => setIndustrialStress(e.target.checked)}
-                  className="w-4 h-4 text-sky-600 border-slate-300 rounded focus:ring-sky-500"
-                />
+                <AnimatePresence initial={false}>
+                  {expandedPolicies["rainwater"] && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: "auto", opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      transition={{ duration: 0.15 }}
+                      className="overflow-hidden pl-5 pr-8"
+                    >
+                      <p className="text-[10.5px] text-slate-500 leading-normal pb-1">
+                        Require buildings and public parks to install systems that catch and store rain falling on roofs. This lessens our daily pull on aquifers by utilizing surface runoff (reduces water depth by 8% and aquifer stress by 6 points).
+                      </p>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+
+              {/* Option 4: Industrial Stress (Negative) */}
+              <div 
+                onClick={() => togglePolicyExpand("industrial")}
+                className="flex flex-col gap-1.5 p-2 rounded hover:bg-slate-200/20 transition-colors duration-150 cursor-pointer pt-3 border-t border-slate-100"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 pr-4">
+                    <span className="text-[8px] text-slate-400 select-none w-3">
+                      {expandedPolicies["industrial"] ? "▼" : "▶"}
+                    </span>
+                    <div className="text-xs font-bold text-slate-800">Unregulated Industrial Over-Extraction (Negative)</div>
+                  </div>
+                  <input 
+                    type="checkbox" 
+                    checked={industrialStress}
+                    onClick={(e) => e.stopPropagation()}
+                    onChange={(e) => setIndustrialStress(e.target.checked)}
+                    className="w-4 h-4 text-sky-600 border-slate-300 rounded focus:ring-sky-500 shrink-0 cursor-pointer"
+                  />
+                </div>
+                <AnimatePresence initial={false}>
+                  {expandedPolicies["industrial"] && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: "auto", opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      transition={{ duration: 0.15 }}
+                      className="overflow-hidden pl-5 pr-8"
+                    >
+                      <p className="text-[10.5px] text-slate-500 leading-normal pb-1">
+                        Allow heavy commercial factories and construction projects to pump groundwater 24/7 without permits. This sucks local water pockets dry faster than nature can ever replenish them (increases water depth by 25% and aquifer stress by 15 points).
+                      </p>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+
+              {/* Option 5: Concrete Cover (Negative) */}
+              <div 
+                onClick={() => togglePolicyExpand("concrete")}
+                className="flex flex-col gap-1.5 p-2 rounded hover:bg-slate-200/20 transition-colors duration-150 cursor-pointer pt-3 border-t border-slate-100"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 pr-4">
+                    <span className="text-[8px] text-slate-400 select-none w-3">
+                      {expandedPolicies["concrete"] ? "▼" : "▶"}
+                    </span>
+                    <div className="text-xs font-bold text-slate-800">Concrete Urban Expansion (Negative)</div>
+                  </div>
+                  <input 
+                    type="checkbox" 
+                    checked={urbanConcreteCover}
+                    onClick={(e) => e.stopPropagation()}
+                    onChange={(e) => setUrbanConcreteCover(e.target.checked)}
+                    className="w-4 h-4 text-sky-600 border-slate-300 rounded focus:ring-sky-500 shrink-0 cursor-pointer"
+                  />
+                </div>
+                <AnimatePresence initial={false}>
+                  {expandedPolicies["concrete"] && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: "auto", opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      transition={{ duration: 0.15 }}
+                      className="overflow-hidden pl-5 pr-8"
+                    >
+                      <p className="text-[10.5px] text-slate-500 leading-normal pb-1">
+                        Pave over dirt roads, gardens, and grasslands with concrete and asphalt. Rainwater can no longer seep into the dirt to refill the aquifers, running off instead into garbage drains (increases water depth by 18% and aquifer stress by 10 points).
+                      </p>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
             </div>
           </section>
