@@ -23,6 +23,8 @@ This guide walks you step-by-step through presenting the AquaSentinel Indore das
 ## 🗺️ 3. Interactive GIS Map (Ward Risk Heatmap)
 *(Focus on the map in the lower-left section)*
 
+![Interactive GIS Map](images/gis_map.png)
+
 *   **What it is**: An interactive geographical information system (GIS) mapping out Indore's four main aquifer zones: Depalpur, Sanwer, Indore, and Mhow.
 *   **The visual elements**: Saturated color-coded aquifer circles (green for Low risk, amber for Medium risk, rose/red for High risk) overlaying a high-contrast base map with English labels.
 *   **Script to say**:
@@ -30,23 +32,16 @@ This guide walks you step-by-step through presenting the AquaSentinel Indore das
 
 ---
 
-## 📊 4. Aquifer Stress Score
-*(Focus on the top-right card)*
+## 📊 4. Aquifer Stress Score & Community Water Security Outlook
+*(Focus on the right section of the dashboard)*
 
-*   **What it is**: A circular visual gauge showing the calculated overall stress level of the targeted aquifer.
-*   **The visual elements**: An outer circle track that fills up according to a 0-100 score, accompanied by a color-coded risk badge (e.g., "MEDIUM RISK").
+![Groundwater Forecast Analysis](images/forecast_analysis.png)
+
+*   **What it is**: The circular visual stress gauge and the human-centric community metrics panel.
 *   **Script to say**:
-    > *"Now let’s look at our **Groundwater Forecast Analysis** on the right. The first KPI card is the **Aquifer Stress Score**. This 100-point index is calculated dynamically by our backend machine learning models. It combines the current water table depth, seasonal drawdowns, and local stress factors to give engineers a single, readable score. A score below 45 is Low Risk, while scores climbing past 60 and 75 trigger High and Critical alerts."*
-
----
-
-## 👥 5. Community Water Security Outlook
-*(Focus on the middle-right card, next to the stress score)*
-
-*   **What it is**: The human-centric metrics panel showing the real-world impact of the aquifer's status.
-*   **The visual elements**: Three styled rows with custom icons showing: **Population Dependent**, **Aquifer Runway Outlook** (in years), and the **Groundwater Health Index** (GHI).
-*   **Script to say**:
-    > *"Next to the stress gauge is our **Community Water Security Outlook**. We created this card to translate abstract water measurements into human terms:
+    > *"Now let’s look at our **Groundwater Forecast Analysis** on the right. The first KPI card is the **Aquifer Stress Score**. This 100-point index is calculated dynamically by our backend machine learning models. It combines the current water table depth, seasonal drawdowns, and local stress factors to give engineers a single, readable score. 
+    > 
+    > Next to the stress gauge is our **Community Water Security Outlook**. We created this card to translate abstract water measurements into human terms:
     > 1. **Population Dependent**: Shows the exact number of residents who rely on this specific aquifer (from 185,000 in Sanwer to 1.45 million in Central Indore).
     > 2. **Aquifer Runway Outlook**: Tells us exactly how many years of water supply are left in the aquifer before it reaches critical depletion under current pumping behaviors.
     > 3. **Groundwater Health Index**: A 0-to-100 rating of the aquifer's sustainability, factoring in water quality (pH, TDS) and volume."*
@@ -55,6 +50,8 @@ This guide walks you step-by-step through presenting the AquaSentinel Indore das
 
 ## 🎛️ 6. "What If" Policy Simulator
 *(Focus on the lower-right simulator section)*
+
+![What If Policy Simulator](images/policy_simulator.png)
 
 *   **What it is**: An interactive sandbox where users can simulate the effects of positive water-saving policies or negative environmental/urban stress events.
 *   **The visual elements**: Five accordion options with chevrons (`▶` / `▼`) and checkboxes.
