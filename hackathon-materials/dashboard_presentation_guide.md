@@ -75,6 +75,8 @@ This guide walks you step-by-step through presenting the AquaSentinel Indore das
 ## 📋 7. Dynamic Recommendations & Interventions
 *(Focus on the bottom-right recommendations panel)*
 
+![Intervention Recommendations](images/recommendations.png)
+
 *   **What it is**: System-generated advice cards tailored to the current block's risk profile.
 *   **Script to say**:
     > *"Finally, based on the forecasted risk level and policy simulations, the dashboard automatically outputs tailored **Intervention Recommendations**. If the risk is high or critical, the engine generates urgent directives:
